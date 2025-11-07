@@ -76,21 +76,30 @@ namespace EMS_Backend.Seeds
                     new FunctionMaster { FunctionId = "Func004" ,FunctionName = "Quản lý nhà cung cấp" },
                     new FunctionMaster { FunctionId = "Func005" ,FunctionName = "Quản lý loại hàng hóa" },
                 };
+                // Lấy tất cả FunctionId hiện có
                 var existingFunctions = await db.FunctionMasters.Select(f => f.FunctionId).ToListAsync();
-                functions.RemoveAll(item => existingFunctions.Contains(item.FunctionId));
-                if (functions.Count > 0)
+
+                // Lấy tất cả RoleFunction hiện có cho Administrator
+                var existingRoleFunctions = await db.RoleFunctions
+                    .Where(rf => rf.RoleId == "Administrator")
+                    .Select(rf => rf.FunctionId)
+                    .ToListAsync();
+
+                var roleFunctionsToAdd = existingFunctions
+                    .Where(fid => !existingRoleFunctions.Contains(fid))
+                    .Select(fid => new RoleFunctions
+                    {
+                        RoleId = "Administrator",
+                        FunctionId = fid,
+                        IsActive = true
+                    })
+                    .ToList();
+
+                if (roleFunctionsToAdd.Count > 0)
                 {
-                    await db.FunctionMasters.AddRangeAsync(functions);
+                    await db.RoleFunctions.AddRangeAsync(roleFunctionsToAdd);
+                    await db.SaveChangesAsync();
                 }
-
-                var roleFuntions = new List<RoleFunctions>();
-
-                foreach (var functionId in existingFunctions) {
-                    var rf = new RoleFunctions { FunctionId = functionId, RoleId = "Administrator", IsActive = true, };
-                    roleFuntions.Add(rf);
-                }
-
-                await db.RoleFunctions.AddRangeAsync(roleFuntions);
 
                 await db.SaveChangesAsync();
             }
